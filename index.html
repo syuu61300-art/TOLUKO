@@ -52,7 +52,7 @@ let M,state='menu',hand={x:W/2,y:H-90},grab=0,ice,vel,tgt,tt,cdn,jt,timeLeft,liv
 const K=Object.keys(MODES);let CL={},curK='easy';
 try{CL=JSON.parse(localStorage.getItem('cleared')||'{}')}catch(e){}
 function menu(){state='menu';ov.classList.remove('hide');document.getElementById('sb').classList.remove('hide');
-ov.innerHTML='<h1 style="line-height:1.3">トルコアイス🍦<br>絶対取ったるゲーム</h1><p>トルコアイスを取らせない店主から、<br>アイスを奪い取れ!<br>手を動かしながら、<b>つかむボタン</b>(PCはスペースキー)を押せ!<br>スマホは片方の指で動かし、もう片方でボタン!</p>'+
+ov.innerHTML='<h1 style="line-height:1.3">トルコアイス🍦<br>絶対取ったるゲーム</h1><p>トルコアイスを取らせない店主から、<br>アイスを奪い取れ!<br>手を動かしながら、<b>つかむボタン</b>(PCはスペースキー)を押せ!<br>スマホは片方の指で動かし、もう片方でつかむボタン!</p>'+
 K.map((k,i)=>{const lk=i>0&&!CL[K[i-1]];return `<button data-k="${k}"${lk?' disabled style="opacity:.45;cursor:not-allowed"':''}>${lk?'🔒 ':CL[k]?'✅ ':''}${MODES[k].n}モード${lk?`<br><small>${MODES[K[i-1]].n}をクリアで解放</small>`:''}</button>`}).join('');
 ov.querySelectorAll('button').forEach(b=>b.onclick=()=>start(b.dataset.k));}
 function start(k){curK=k;M=MODES[k];ov.classList.add('hide');if(editing)closeEdit(false);document.getElementById('sb').classList.add('hide');ice={x:W/2,y:260};vel={x:0,y:0};tgt={x:W/2,y:260};tt=0;cdn=0;jt=1;
