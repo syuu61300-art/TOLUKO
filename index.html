@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>トルコアイス🍦 絶対取ったるゲーム</title>
+<style>
+:root{--bg:#fff7ec;--fg:#3b2a1a;--card:#ffffff;--ac:#e8590c;--ac2:#c2410c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1e1610;--fg:#fbeedd;--card:#2b2018;--ac:#fb923c;--ac2:#f97316}}
+:root[data-theme="dark"]{--bg:#1e1610;--fg:#fbeedd;--card:#2b2018;--ac:#fb923c;--ac2:#f97316}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;display:flex;justify-content:center;padding:8px}
+#wrap{position:relative;width:100%;max-width:420px}
+canvas{width:100%;height:auto;display:block;border-radius:16px;touch-action:none;cursor:none;background:#ffe9c7}
+#ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(30,20,10,.55);border-radius:16px;text-align:center;color:#fff;padding:16px}
+#gb{position:fixed;z-index:5;border-radius:50%;padding:0;font-size:14px;line-height:1.1;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;touch-action:none;box-shadow:0 4px 14px rgba(0,0,0,.35);border:3px solid #fff}
+#gb b{font-size:2.2em;font-weight:400}
+#gb.edit{outline:3px dashed #2563eb;cursor:move}
+#sb{width:100%;margin-top:8px;padding:12px 0;background:var(--card);color:var(--fg);border:2px solid var(--ac)}
+#st{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;z-index:10;background:var(--card);color:var(--fg);padding:12px 16px;border-radius:0 0 16px 16px;box-shadow:0 4px 20px rgba(0,0,0,.35);max-width:440px;margin:0 auto;opacity:.97}
+#st h3{margin:0 0 6px;font-size:16px}#st label{display:block;font-size:13px;margin:8px 0 2px}#st input{width:100%}
+.pr{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#st button{width:auto;padding:9px 0;font-size:13px}.row{display:flex;gap:6px;margin-top:10px}.row button{flex:1}
+#ov{bottom:auto;aspect-ratio:420/600}
+#ov h1{margin:0;font-size:26px}#ov p{margin:0;font-size:14px;opacity:.95}
+button{font:inherit;font-weight:700;border:0;border-radius:12px;padding:12px 0;width:220px;background:var(--ac);color:#fff;cursor:pointer}
+button:active{background:var(--ac2)}
+.hide{display:none!important}
+</style></head><body>
+<div id="wrap">
+<canvas id="c" width="420" height="600"></canvas>
+<div id="ov"></div>
+<button id="sb">⚙️ つかむボタンの設定</button>
+</div>
+<button id="gb"><b>✊</b>つかむ</button>
+<div id="st" class="hide"><h3>⚙️ つかむボタン設定</h3>
+<div>ボタンを<b>ドラッグ</b>して好きな場所へ。決まったら「保存」を押してください(プリセットも選べます)</div>
+<div class="pr" style="margin-top:4px"><button data-p=".18,.85">左下</button><button data-p=".5,.85">中央下</button><button data-p=".82,.85">右下</button><button data-p=".15,.55">左中</button><button data-p=".5,.6">中央</button><button data-p=".85,.55">右中</button></div>
+<label>透明度 <span id="ovl"></span></label><input type="range" id="op" min="20" max="100">
+<div class="row"><button id="rs">リセット</button><button id="cn">キャンセル</button><button id="sv2">💾 保存</button></div></div>
+<div>
+</div>
+<script>
+const cv=document.getElementById('c'),g=cv.getContext('2d'),ov=document.getElementById('ov');
+const W=420,H=600;
+const MODES={
+ easy:{n:'簡単',sp:.9,dd:60,f:5,cd:.5,r:48,t:30,l:5,jump:0},
+ normal:{n:'普通',sp:1.3,dd:85,f:8,cd:.4,r:40,t:30,l:4,jump:0},
+ hard:{n:'難しい',sp:1.8,dd:105,f:11,cd:.3,r:33,t:25,l:3,jump:2.2},
+ insane:{n:'激ムズ',sp:2.5,dd:135,f:15,cd:.2,r:27,t:20,l:3,jump:1.2}
+};
+let M,state='menu',hand={x:W/2,y:H-90},grab=0,ice,vel,tgt,tt,cdn,jt,timeLeft,lives,cnt,last,msg='',msgT=0,shake=0;
+const K=Object.keys(MODES);let CL={},curK='easy';
+try{CL=JSON.parse(localStorage.getItem('cleared')||'{}')}catch(e){}
+function menu(){state='menu';ov.classList.remove('hide');document.getElementById('sb').classList.remove('hide');
+ov.innerHTML='<h1 style="line-height:1.3">トルコアイス🍦<br>絶対取ったるゲーム</h1><p>トルコアイスを取らせない店主から、<br>アイスを奪い取れ!<br>手を動かしながら、<b>つかむボタン</b>(PCはスペースキー)を押せ!<br>スマホは片方の指で動かし、もう片方でボタン!</p>'+
+K.map((k,i)=>{const lk=i>0&&!CL[K[i-1]];return `<button data-k="${k}"${lk?' disabled style="opacity:.45;cursor:not-allowed"':''}>${lk?'🔒 ':CL[k]?'✅ ':''}${MODES[k].n}モード${lk?`<br><small>${MODES[K[i-1]].n}をクリアで解放</small>`:''}</button>`}).join('');
+ov.querySelectorAll('button').forEach(b=>b.onclick=()=>start(b.dataset.k));}
+function start(k){curK=k;M=MODES[k];ov.classList.add('hide');if(editing)closeEdit(false);document.getElementById('sb').classList.add('hide');ice={x:W/2,y:260};vel={x:0,y:0};tgt={x:W/2,y:260};tt=0;cdn=0;jt=1;
+timeLeft=M.t;lives=M.l;cnt=3;state='count';last=performance.now();msg='';}
+function end(win){state='end';if(win){CL[curK]=1;try{localStorage.setItem('cleared',JSON.stringify(CL))}catch(e){}}const nx=K[K.indexOf(curK)+1];ov.classList.remove('hide');
+ov.innerHTML=win?`<div style="font-size:60px">🎉🍦</div><h1>ゲット成功!</h1><p>${M.n}モード クリア!<br>残り ${timeLeft.toFixed(1)} 秒${nx?'':'<br>🏆 全モード制覇!'}</p>`:
+`<div style="font-size:60px">😭</div><h1>取れなかった…</h1><p>${lives<=0?'ミスしすぎ!':'時間切れ!'}<br>店主のドヤ顔が憎い</p>`;
+const b=(t,f)=>{const e=document.createElement('button');e.textContent=t;e.onclick=f;ov.appendChild(e)};
+if(win&&nx)b('次へ:'+MODES[nx].n+'モード ▶',()=>start(nx));b('もう一回',()=>start(curK));b('モード選択',menu);}
+function pos(e){const r=cv.getBoundingClientRect();hand.x=(e.clientX-r.left)*W/r.width;hand.y=(e.clientY-r.top)*H/r.height;}
+cv.addEventListener('pointermove',pos);
+cv.addEventListener('pointerdown',pos);
+addEventListener('keydown',e=>{if(e.code==='Space'||e.key==='Enter'){e.preventDefault();if(!e.repeat)doGrab()}});
+const gb=document.getElementById('gb');
+const Z=110;let S={cx:.82,cy:.85,op:100},editing=false,drag=false,bk=null;const D={...S};
+try{const o=JSON.parse(localStorage.getItem('gbset')||'{}');if(o.cx!=null)S.cx=o.cx;if(o.cy!=null)S.cy=o.cy;if(o.op!=null)S.op=o.op}catch(e){}
+const st=document.getElementById('st'),op=document.getElementById('op');
+function apply(){const w=innerWidth,h=innerHeight;gb.style.width=gb.style.height=Z+'px';gb.style.opacity=S.op/100;
+ gb.style.left=Math.max(0,Math.min(w-Z,S.cx*w-Z/2))+'px';gb.style.top=Math.max(0,Math.min(h-Z,S.cy*h-Z/2))+'px';
+ op.value=S.op;document.getElementById('ovl').textContent=S.op+'%'}
+function save(){try{localStorage.setItem('gbset',JSON.stringify(S))}catch(e){}}
+function edit(on){editing=on;st.classList.toggle('hide',!on);gb.classList.toggle('edit',on)}
+function openEdit(){bk={...S};edit(true)}
+function closeEdit(commit){if(commit)save();else if(bk){Object.assign(S,bk);apply()}edit(false)}
+document.getElementById('sb').onclick=openEdit;
+document.getElementById('sv2').onclick=()=>closeEdit(true);document.getElementById('cn').onclick=()=>closeEdit(false);
+document.getElementById('rs').onclick=()=>{Object.assign(S,D);apply()};
+st.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const[a,c]=b.dataset.p.split(',');S.cx=+a;S.cy=+c;apply()});
+op.oninput=()=>{S.op=+op.value;apply()};
+addEventListener('resize',apply);apply();
+gb.addEventListener('pointerdown',e=>{e.preventDefault();if(editing){drag=true;gb.setPointerCapture(e.pointerId)}else doGrab()});
+gb.addEventListener('pointermove',e=>{if(drag){S.cx=e.clientX/innerWidth;S.cy=e.clientY/innerHeight;apply()}});
+gb.addEventListener('pointerup',()=>{drag=false});
+function doGrab(){
+ if(editing||state!=='play'||grab>0)return;grab=.25;
+ if(Math.hypot(hand.x-ice.x,hand.y-ice.y)<M.r){end(true);}
+ else{lives--;shake=.3;say(['ざんねん〜!','遅いよ!','ハハハ!','取れないよ〜'][Math.random()*4|0]);if(lives<=0)end(false);}}
+function say(t){msg=t;msgT=1.2}
+function upd(dt){
+ tt+=dt*M.sp;grab=Math.max(0,grab-dt);cdn-=dt;jt-=dt;shake=Math.max(0,shake-dt);msgT-=dt;
+ timeLeft-=dt;if(timeLeft<=0){timeLeft=0;end(false);return}
+ tgt.x=W/2+Math.sin(tt*1.3)*150+Math.sin(tt*2.9)*40;tgt.y=270+Math.cos(tt*1.7)*110+Math.sin(tt*3.3)*30;
+ if(M.jump&&jt<=0){jt=M.jump*(.6+Math.random()*.8);ice.x=40+Math.random()*(W-80);ice.y=150+Math.random()*300;say('ほいっ!')}
+ const d=Math.hypot(hand.x-ice.x,hand.y-ice.y);
+ if(d<M.dd&&cdn<=0){const a=Math.atan2(ice.y-hand.y,ice.x-hand.x)+(Math.random()-.5)*1.2;
+  vel.x+=Math.cos(a)*M.f;vel.y+=Math.sin(a)*M.f;cdn=M.cd;if(Math.random()<.3)say('取らせないよ〜!')}
+ ice.x+=(tgt.x-ice.x)*Math.min(1,dt*3)+vel.x*dt*60;ice.y+=(tgt.y-ice.y)*Math.min(1,dt*3)+vel.y*dt*60;
+ vel.x*=.9;vel.y*=.9;
+ ice.x=Math.max(35,Math.min(W-35,ice.x));ice.y=Math.max(140,Math.min(H-110,ice.y));
+}
+function txt(s,x,y,sz,al='center'){g.font=sz+'px sans-serif';g.textAlign=al;g.textBaseline='middle';g.fillText(s,x,y)}
+function draw(){
+ g.save();if(shake>0)g.translate((Math.random()-.5)*8,(Math.random()-.5)*8);
+ const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#ffd9a0');gr.addColorStop(1,'#ffeccc');g.fillStyle=gr;g.fillRect(-10,-10,W+20,H+20);
+ g.fillStyle='#c2410c';g.fillRect(0,0,W,20);for(let i=0;i<W;i+=40){g.fillStyle=i%80?'#fff':'#dc2626';g.fillRect(i,0,40,20)}
+ g.fillStyle='#8b5a2b';g.fillRect(0,H-40,W,40);
+ txt('👨‍🍳',W/2,85,72);
+ if(state!=='menu'&&ice){
+  g.strokeStyle='#8b5a2b';g.lineWidth=6;g.lineCap='round';g.beginPath();g.moveTo(W/2+30,110);g.lineTo(ice.x,ice.y+8);g.stroke();
+  txt('🍦',ice.x,ice.y,64);
+  if(msgT>0){g.fillStyle='#fff';g.strokeStyle='#3b2a1a';g.lineWidth=2;g.beginPath();g.roundRect(W-175,30,165,34,10);g.fill();g.stroke();g.fillStyle='#3b2a1a';txt(msg,W-92,47,15)}
+  g.fillStyle='rgba(60,40,20,.85)';txt('⏱ '+timeLeft.toFixed(1),12,H-20,20,'left');
+  g.fillStyle='#000';txt('❤️'.repeat(Math.max(0,lives)),W-12,H-20,20,'right');
+  if(state==='count'){g.fillStyle='rgba(0,0,0,.35)';g.fillRect(0,0,W,H);g.fillStyle='#fff';txt(Math.ceil(cnt)+'',W/2,H/2,140)}
+ }
+ if(state!=='menu'&&state!=='end'){g.fillStyle='#000';txt(grab>0?'✊':'🖐️',hand.x,hand.y,56)}
+ g.restore();
+}
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;
+ if(state==='count'){cnt-=dt;if(cnt<=0){state='play';say('かかってこい!')}}
+ else if(state==='play')upd(dt);
+ draw();requestAnimationFrame(loop)}
+menu();requestAnimationFrame(t=>{last=t;loop(t)});
+</script></body></html>
